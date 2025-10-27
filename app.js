@@ -1,9 +1,9 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-// import client from "./db.js";
+// import des routes
 const device = require("./router/device");
-
+const sensorType = require("./router/sensor_type");
 // Activer la lecture des données JSON
 app.use(bodyParser.json());
 
@@ -23,6 +23,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use("/device",device);
+app.use("/sensor-type",sensorType);
+
 app.get("/",(req, res) => {
   res.send('Bienvenue sur mon API Node.js!');
 });
