@@ -1,36 +1,30 @@
 exports.NewSensorType = async (req, res, client) => {
   try {
-    const { name } = req.body;
+    const { name, unit } = req.body;
 
-    // Insérer un type de capteur
+    if (!name || !unit) {
+      return res.status(400).json({ error: "Veuillez fournir le nom et l'unité du type de capteur." });
+    }
+
     const query = {
-      text: "INSERT INTO sensor_type (name) VALUES ($1)",
-      values: [name],
+      text: "INSERT INTO sensor_type (name, unit) VALUES ($1, $2)",
+      values: [name, unit],
     };
 
     await client.query(query);
 
-    // Préparer la réponse
-    const responseData = {
-      message: "Type de capteur ajouté avec avec succès",
-    };
-
-    res.status(201).json(responseData);
+    res.status(201).json({ message: "Type de capteur ajouté avec succès." });
   } catch (error) {
-    console.error(
-      "Erreur lors de l'insertion :",
-      error
-    );
-    res
-      .status(500)
-      .json({ error: "Erreur lors de l'insertion" });
+    console.error("Erreur lors de l'insertion :", error);
+    res.status(500).json({ error: "Erreur lors de l'insertion" });
   }
 };
+
 
 exports.getAllSensorType = async (req, res, client) => {
   try {
     // Récupérer tous les appareils
-    const query = { text: "SELECT * FROM sensor_type" };
+const query = { text: "SELECT * FROM sensor_type" };
     const response = await client.query(query);
     const sensorType = response.rows;
     res.status(200).json({ sensorType });
@@ -46,32 +40,35 @@ exports.deleteSensorType = async (req, res, client) => {
   try {
     const { id } = req.body;
 
-    // Supprimer un type de capteur
-    const query = {
+    // Vérifier si le type de capteur est utilisé
+    const checkQuery = {
+      text: "SELECT COUNT(*) FROM sensor WHERE type_id = $1",
+      values: [id],
+    };
+    const checkResult = await client.query(checkQuery);
+    const count = parseInt(checkResult.rows[0].count);
+
+    if (count > 0) {
+      return res.status(400).json({
+        error: "Impossible de supprimer ce type de capteur : il est encore utilisé par des capteurs.",
+      });
+    }
+
+    // Supprimer le type
+    const deleteQuery = {
       text: "DELETE FROM sensor_type WHERE id = $1",
       values: [id],
     };
+    const result = await client.query(deleteQuery);
 
-    // Exécuter la requête de suppression
-    const result = await client.query(query);
-
-    // Préparer la réponse
-    const responseData = {
+    res.status(result.rowCount === 0 ? 404 : 200).json({
       message:
         result.rowCount === 0
-          ? "type de capteur non trouvée"
-          : "type de capteur supprimée avec succès",
-    };
-
-    // Définir le code de statut approprié
-    res.status(result.rowCount === 0 ? 404 : 200).json(responseData);
-  } catch (error) {
-    console.error(
-      `Erreur lors de la suppression du type de capteur (${req.body.name}) :`,
-      error
-    );
-    res.status(500).json({
-      error: `Erreur lors de la suppression du type de capteur : ${req.body.name}`,
+          ? "Type de capteur non trouvé."
+          : "Type de capteur supprimé avec succès.",
     });
+  } catch (error) {
+    console.error("Erreur lors de la suppression du type de capteur :", error);
+    res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };

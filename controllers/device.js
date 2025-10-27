@@ -46,32 +46,34 @@ exports.deleteDevice = async (req, res, client) => {
   try {
     const { id } = req.body;
 
-    // Supprimer une catégorie
-    const query = {
+    // Vérifier si l'appareil a encore des capteurs liés
+    const checkQuery = {
+      text: "SELECT COUNT(*) FROM sensor WHERE esp_id = $1",
+      values: [id],
+    };
+    const checkResult = await client.query(checkQuery);
+    const count = parseInt(checkResult.rows[0].count);
+
+    if (count > 0) {
+      return res.status(400).json({
+        error: "Impossible de supprimer cet appareil : il est encore lié à des capteurs.",
+      });
+    }
+
+    const deleteQuery = {
       text: "DELETE FROM esp_device WHERE id = $1",
       values: [id],
     };
+    const result = await client.query(deleteQuery);
 
-    // Exécuter la requête de suppression
-    const result = await client.query(query);
-
-    // Préparer la réponse
-    const responseData = {
+    res.status(result.rowCount === 0 ? 404 : 200).json({
       message:
         result.rowCount === 0
-          ? "Appareil non trouvée"
-          : "Appareil supprimée avec succès",
-    };
-
-    // Définir le code de statut approprié
-    res.status(result.rowCount === 0 ? 404 : 200).json(responseData);
-  } catch (error) {
-    console.error(
-      `Erreur lors de la suppression de l'appareil (${req.body.name}) :`,
-      error
-    );
-    res.status(500).json({
-      error: `Erreur lors de la suppression de l'appareil : ${req.body.name}`,
+          ? "Appareil non trouvé."
+          : "Appareil supprimé avec succès.",
     });
+  } catch (error) {
+    console.error("Erreur lors de la suppression de l'appareil :", error);
+    res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };
