@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
+// import client from "./db.js";
+const device = require("./router/device");
 
 // Activer la lecture des données JSON
 app.use(bodyParser.json());
@@ -19,8 +21,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes pour utilisateurs, catégories et produits
-
+// Routes
+app.use("/device",device);
 app.get("/",(req, res) => {
   res.send('Bienvenue sur mon API Node.js!');
 });
